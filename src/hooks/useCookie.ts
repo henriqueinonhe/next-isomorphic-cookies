@@ -1,9 +1,9 @@
 import Cookies from "js-cookie";
 import { useIsomorphicLayoutEffect } from "../hooks/useIsomorphicLayoutEffect";
-import { useInitialCookies } from "./useInitialCookies";
+import { useCookiesInServer } from "./useCookiesInServer";
 
 const useClientSideCookies = <T>(key: string) => {
-  const { cookiesInServer, isHydratingRef } = useInitialCookies();
+  const { cookiesInServer, isHydratingRef } = useCookiesInServer();
 
   const noCookiesInServer = cookiesInServer === null;
   const needsSyncAfterHydration = noCookiesInServer && isHydratingRef.current;
@@ -53,7 +53,7 @@ const useClientSideCookies = <T>(key: string) => {
 };
 
 const useServerSideCookies = <T>(key: string) => {
-  const { cookiesInServer, isHydratingRef } = useInitialCookies();
+  const { cookiesInServer, isHydratingRef } = useCookiesInServer();
 
   const noCookiesInServer = cookiesInServer === null;
   const needsSyncAfterHydration = noCookiesInServer && isHydratingRef.current;

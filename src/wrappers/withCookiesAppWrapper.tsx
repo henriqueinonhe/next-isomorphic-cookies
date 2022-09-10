@@ -1,6 +1,6 @@
 import { AppProps } from "next/app";
 import React from "react";
-import { CookiesProvider } from "../components/CookiesProvider";
+import { CookiesInServerProvider } from "../components/CookiesInServerProvider";
 
 type App<P extends {}> = (props: AppProps<P>) => JSX.Element;
 
@@ -26,12 +26,18 @@ export const withCookiesAppWrapper = <P extends {}>(
   // eslint-disable-next-line react/display-name
   return (props) => {
     return (
-      <CookiesProvider
-        cookies={props.pageProps.__next_isomorphic_cookies ?? null}
+      <CookiesInServerProvider
+        // We fallback to null when we don't receive
+        // __next_isomorphic_cookies (in SSG or when
+        // the user doesn't wrap getServerSideProps)
+        // to differentiate between not forgetting to
+        // wrap App (which makes the context value undefined)
+        // and not receiving cookies.
+        cookiesInServer={props.pageProps.__next_isomorphic_cookies ?? null}
         isHydratingRef={isHydratingRef}
       >
         <App {...props} />
-      </CookiesProvider>
+      </CookiesInServerProvider>
     );
   };
 };
