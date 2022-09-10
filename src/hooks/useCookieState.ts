@@ -1,67 +1,70 @@
 import { useState } from "react";
-import { useCookie } from "./useCookie";
-import { useSyncWithCookie } from "./useSyncWithCookie";
+import { UseCookie } from "./useCookie";
+import { UseSyncWithCookie } from "./useSyncWithCookie";
 
-const useClientSideCookieState = <T>(
-  key: string,
-  initializer: (storedValue: T | undefined) => T
-) => {
-  const { retrieve, store, clear, needsSyncAfterHydration } = useCookie<T>(key);
-
-  const [value, setValue] = useState<T>(() =>
-    initializer(needsSyncAfterHydration ? undefined : retrieve())
-  );
-
-  useSyncWithCookie<T>(key, () => {
-    boundRetrieve();
-  });
-
-  const boundRetrieve = () => {
-    const storedValue = retrieve();
-    setValue(storedValue ?? initializer(storedValue));
-  };
-
-  const boundStore = () => {
-    store(value);
-  };
-
-  const boundClear = clear;
-
-  return {
-    value,
-    setValue,
-    retrieve: boundRetrieve,
-    store: boundStore,
-    clear: boundClear,
-  };
+type UseClientSideCookieStateDependencies = {
+  useCookie: UseCookie;
+  useSyncWithCookie: UseSyncWithCookie;
 };
 
-const useServerSideCookieState = <T>(
-  key: string,
-  initializer: (storedValue: T | undefined) => T
-) => {
-  const { clear, retrieve } = useCookie<T>(key);
+export const makeUseClientSideCookieState =
+  ({ useCookie, useSyncWithCookie }: UseClientSideCookieStateDependencies) =>
+  <T>(key: string, initializer: (storedValue: T | undefined) => T) => {
+    const { retrieve, store, clear, needsSyncAfterHydration } =
+      useCookie<T>(key);
 
-  const [value, setValue] = useState<T>(() => initializer(retrieve()));
+    const [value, setValue] = useState<T>(() =>
+      initializer(needsSyncAfterHydration ? undefined : retrieve())
+    );
 
-  const boundRetrieve = () => {
-    const storedValue = retrieve();
-    setValue(storedValue ?? initializer(storedValue));
+    useSyncWithCookie<T>(key, () => {
+      boundRetrieve();
+    });
+
+    const boundRetrieve = () => {
+      const storedValue = retrieve();
+      setValue(storedValue ?? initializer(storedValue));
+    };
+
+    const boundStore = () => {
+      store(value);
+    };
+
+    const boundClear = clear;
+
+    return {
+      value,
+      setValue,
+      retrieve: boundRetrieve,
+      store: boundStore,
+      clear: boundClear,
+    };
   };
 
-  // No Op
-  const boundStore = () => undefined;
-
-  return {
-    value,
-    setValue,
-    retrieve: boundRetrieve,
-    store: boundStore,
-    clear,
-  };
+type UseServerSideCookieStateDependencies = {
+  useCookie: UseCookie;
 };
 
-export const useCookieState =
-  typeof document !== undefined
-    ? useClientSideCookieState
-    : useServerSideCookieState;
+export const makeUseServerSideCookieState =
+  ({ useCookie }: UseServerSideCookieStateDependencies) =>
+  <T>(key: string, initializer: (storedValue: T | undefined) => T) => {
+    const { clear, retrieve } = useCookie<T>(key);
+
+    const [value, setValue] = useState<T>(() => initializer(retrieve()));
+
+    const boundRetrieve = () => {
+      const storedValue = retrieve();
+      setValue(storedValue ?? initializer(storedValue));
+    };
+
+    // No Op
+    const boundStore = () => undefined;
+
+    return {
+      value,
+      setValue,
+      retrieve: boundRetrieve,
+      store: boundStore,
+      clear,
+    };
+  };

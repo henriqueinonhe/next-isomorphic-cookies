@@ -10,3 +10,5 @@ export const useCookiesInServer = () => {
 
   return value;
 };
+
+export type UseCookiesInServer = typeof useCookiesInServer;

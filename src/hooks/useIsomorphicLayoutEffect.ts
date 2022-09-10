@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect } from "react";
-import { isServer } from "../utils/isServer";
 
-export const useIsomorphicLayoutEffect = isServer()
-  ? useLayoutEffect
-  : useEffect;
+export type UseIsomorphicLayoutEffect =
+  | typeof useEffect
+  | typeof useLayoutEffect;

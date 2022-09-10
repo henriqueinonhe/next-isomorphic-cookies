@@ -9,7 +9,7 @@ export const CookiesInServerContext = createContext<
   CookiesInServerContextValue | undefined
 >(undefined);
 
-type CookiesProviderProps = {
+type CookiesInServerProviderProps = {
   children: ReactNode;
   cookiesInServer: Record<string, string> | null;
   isHydratingRef: { current: boolean };
@@ -19,7 +19,7 @@ export const CookiesInServerProvider = ({
   children,
   cookiesInServer,
   isHydratingRef,
-}: CookiesProviderProps) => {
+}: CookiesInServerProviderProps) => {
   const value = useMemo(
     () => ({
       isHydratingRef,
