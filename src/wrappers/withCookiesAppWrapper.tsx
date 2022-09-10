@@ -4,8 +4,8 @@ import { CookiesProvider } from "../components/CookiesProvider";
 
 type App<P extends {}> = (props: AppProps<P>) => JSX.Element;
 
-type WithCookiesProps = {
-  cookies: Record<string, string>;
+export type WithCookiesProps = {
+  __next_isomorphic_cookies: Record<string, string>;
 };
 
 type AppWithCookies<P extends {}> = (
@@ -27,7 +27,7 @@ export const withCookiesAppWrapper = <P extends {}>(
   return (props) => {
     return (
       <CookiesProvider
-        cookies={props.pageProps.cookies ?? null}
+        cookies={props.pageProps.__next_isomorphic_cookies ?? null}
         isHydratingRef={isHydratingRef}
       >
         <App {...props} />

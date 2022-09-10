@@ -1,5 +1,5 @@
 {
-  "name": "rescope",
+  "name": "next-isomorphic-cookies",
   "version": "0.0.1",
   "description": "Simplest state management for React.",
   "main": "dist/index.js",
@@ -8,20 +8,20 @@
     "test": "npx jest --coverage --silent"
   },
   "keywords": [
+    "next",
     "react",
-    "state management",
-    "jotai",
-    "recoil"
+    "cookies",
+    "isomorphic"
   ],
   "author": "Henrique Yuji Rossetti Inonhe <henriqueinonhe@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/henriqueinonhe/rescope.git",
+    "url": "https://github.com/henriqueinonhe/next-isomorphic-cookies.git",
     "email": "henriqueinonhe@gmail.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/henriqueinonhe/rescope.git"
+    "url": "https://github.com/henriqueinonhe/next-isomorphic-cookies.git"
   },
   "devDependencies": {
     "@testing-library/dom": "8.17.1",

@@ -1,14 +1,11 @@
-import {
-  GetServerSideProps,
-  PreviewData,
-} from "next";
+import { GetServerSideProps, PreviewData } from "next";
 import { ParsedUrlQuery } from "querystring";
 
 type Wrappee<
   P extends {} = {},
   Q extends ParsedUrlQuery = ParsedUrlQuery,
   D extends PreviewData = PreviewData
-> = GetServerSideProps<P, Q, D>
+> = GetServerSideProps<P, Q, D>;
 
 type WithCookiesGetPropsWrapper<
   P extends {} = {},
@@ -22,12 +19,10 @@ export const withCookiesGetServerSidePropsWrapper =
     Q extends ParsedUrlQuery = ParsedUrlQuery,
     D extends PreviewData = PreviewData
   >(
-    getProps: Wrappee<P, Q, D>
+    getServerSideProps: Wrappee<P, Q, D>
   ): WithCookiesGetPropsWrapper<P, Q, D> =>
-  async (
-    context
-  ) => {
-    const originalProps = (await getProps(context)) as {
+  async (context) => {
+    const originalProps = (await getServerSideProps(context)) as {
       props: P;
     };
 
@@ -35,7 +30,7 @@ export const withCookiesGetServerSidePropsWrapper =
       ...originalProps,
       props: {
         ...originalProps.props,
-        cookies: context.req.cookies
+        __next_isomorphic_cookies: context.req.cookies,
       },
     };
   };
