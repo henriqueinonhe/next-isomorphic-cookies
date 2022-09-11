@@ -77,6 +77,30 @@ describe("When in the server", () => {
       });
     });
   });
+
+  describe("When calling store", () => {
+    const secondSetup = () => {
+      const { renderHookReturnValue } = setup({ cookiesInServer: null });
+
+      renderHookReturnValue.result.current.store();
+    };
+
+    it("No op", () => {
+      expect(() => secondSetup()).not.toThrow();
+    });
+  });
+
+  describe("When calling clear", () => {
+    const secondSetup = () => {
+      const { renderHookReturnValue } = setup({ cookiesInServer: null });
+
+      renderHookReturnValue.result.current.clear();
+    };
+
+    it("No op", () => {
+      expect(() => secondSetup()).not.toThrow();
+    });
+  });
 });
 
 describe("When in the client", () => {
@@ -93,6 +117,8 @@ describe("When in the client", () => {
   }: SetupParameters) => {
     const Cookies = {
       get: (key: string) => cookiesInClient[key],
+      set: jest.fn(),
+      remove: jest.fn(),
     } as unknown as typeof Cookie;
 
     const useCookiesInServer: UseCookiesInServer = () => ({
@@ -120,6 +146,7 @@ describe("When in the client", () => {
       key,
       useCookie,
       logger,
+      Cookies,
     };
   };
 
@@ -307,6 +334,73 @@ describe("When in the client", () => {
 
         expect(retrieveReturnValue).toBe("SomeValue");
       });
+    });
+  });
+
+  describe("When calling store", () => {
+    const secondSetup = () => {
+      const isHydratingRef = {
+        current: true,
+      };
+
+      const setupReturnValue = setup({
+        cookiesInClient: {},
+        cookiesInServer: null,
+        isHydratingRef,
+      });
+
+      const { key, useCookie } = setupReturnValue;
+
+      const { result } = renderHook(() => useCookie(key));
+
+      const storedValue = "SomeOtherValue";
+      result.current.store(storedValue);
+
+      return {
+        ...setupReturnValue,
+        storedValue,
+      };
+    };
+
+    it("Sets cookie", () => {
+      const { Cookies, key, storedValue } = secondSetup();
+
+      expect(Cookies.set).toHaveBeenCalledTimes(1);
+      expect(Cookies.set).toHaveBeenNthCalledWith(
+        1,
+        key,
+        JSON.stringify(storedValue)
+      );
+    });
+  });
+
+  describe("When calling clear", () => {
+    const secondSetup = () => {
+      const isHydratingRef = {
+        current: true,
+      };
+
+      const setupReturnValue = setup({
+        cookiesInClient: {},
+        cookiesInServer: null,
+        isHydratingRef,
+      });
+
+      const { key, useCookie } = setupReturnValue;
+
+      const { result } = renderHook(() => useCookie(key));
+
+      result.current.clear();
+
+      return {
+        ...setupReturnValue,
+      };
+    };
+
+    it("Removes cookie", () => {
+      const { Cookies } = secondSetup();
+
+      expect(Cookies.remove).toHaveBeenCalledTimes(1);
     });
   });
 });

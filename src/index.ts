@@ -11,6 +11,9 @@ import {
   makeUseServerSideCookieState,
 } from "./hooks/useCookieState";
 import { makeUseSyncWithCookie } from "./hooks/useSyncWithCookie";
+import { devLogger, prodLogger } from "./utils/logger";
+
+const logger = process.env.NODE_ENV === "production" ? prodLogger : devLogger;
 
 const useIsomorphicLayoutEffect = isServer() ? useEffect : useLayoutEffect;
 
@@ -22,6 +25,7 @@ const useCookie = isServer()
       Cookies,
       useCookiesInServer,
       useIsomorphicLayoutEffect,
+      logger,
     });
 
 const useSyncWithCookie = makeUseSyncWithCookie({

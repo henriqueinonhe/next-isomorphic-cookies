@@ -21,7 +21,7 @@ export const makeUseClientSideCookie =
     const { cookiesInServer, isHydratingRef } = useCookiesInServer();
 
     const noCookiesInServer = cookiesInServer === null;
-    const needsSyncAfterHydration = noCookiesInServer && isHydratingRef.current;
+    const needsSync = noCookiesInServer && isHydratingRef.current;
 
     useIsomorphicLayoutEffect(() => {
       // HACK (Kinda)
@@ -64,7 +64,7 @@ export const makeUseClientSideCookie =
       store,
       retrieve,
       clear,
-      needsSyncAfterHydration,
+      needsSync,
     };
   };
 
@@ -78,7 +78,7 @@ export const makeUseServerSideCookie =
     const { cookiesInServer, isHydratingRef } = useCookiesInServer();
 
     const noCookiesInServer = cookiesInServer === null;
-    const needsSyncAfterHydration = noCookiesInServer && isHydratingRef.current;
+    const needsSync = noCookiesInServer && isHydratingRef.current;
 
     const retrieve = (): T | undefined =>
       noCookiesInServer ? undefined : JSON.parse(cookiesInServer[key]);
@@ -93,7 +93,7 @@ export const makeUseServerSideCookie =
       store,
       retrieve,
       clear,
-      needsSyncAfterHydration,
+      needsSync,
     };
   };
 

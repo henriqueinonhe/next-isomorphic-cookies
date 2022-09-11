@@ -10,11 +10,10 @@ type UseClientSideCookieStateDependencies = {
 export const makeUseClientSideCookieState =
   ({ useCookie, useSyncWithCookie }: UseClientSideCookieStateDependencies) =>
   <T>(key: string, initializer: (storedValue: T | undefined) => T) => {
-    const { retrieve, store, clear, needsSyncAfterHydration } =
-      useCookie<T>(key);
+    const { retrieve, store, clear, needsSync } = useCookie<T>(key);
 
     const [value, setValue] = useState<T>(() =>
-      initializer(needsSyncAfterHydration ? undefined : retrieve())
+      initializer(needsSync ? undefined : retrieve())
     );
 
     useSyncWithCookie<T>(key, () => {

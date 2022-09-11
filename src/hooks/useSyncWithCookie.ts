@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { UseIsomorphicLayoutEffect } from "../hooks/useIsomorphicLayoutEffect";
 import { UseCookie } from "./useCookie";
 
@@ -9,10 +10,10 @@ type Dependencies = {
 export const makeUseSyncWithCookie =
   ({ useCookie, useIsomorphicLayoutEffect }: Dependencies) =>
   <T>(key: string, sync: (cookieValue: T | undefined) => void) => {
-    const { retrieve, needsSyncAfterHydration } = useCookie<T>(key);
+    const { retrieve, needsSync } = useCookie<T>(key);
 
     useIsomorphicLayoutEffect(() => {
-      if (needsSyncAfterHydration) {
+      if (needsSync) {
         sync(retrieve());
       }
     }, []);
