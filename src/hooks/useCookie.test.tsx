@@ -169,7 +169,9 @@ describe("When in the client", () => {
 
     describe("And there are cookies in the server", () => {
       const thirdSetup = () => {
-        const cookiesInClient = { SomeCookie: JSON.stringify("SomeValue") };
+        const cookiesInClient = {
+          SomeCookie: JSON.stringify("SomeOtherValue"),
+        };
 
         const cookiesInServer = {
           SomeCookie: JSON.stringify("SomeValue"),
@@ -181,6 +183,14 @@ describe("When in the client", () => {
           ...secondSetup({ cookiesInClient, cookiesInServer }),
         };
       };
+
+      it("Needs sync is false", () => {
+        const { key, useCookie } = thirdSetup();
+
+        const { result } = renderHook(() => useCookie(key));
+
+        expect(result.current.needsSync).toBe(false);
+      });
 
       describe("And we call retrieve during RENDER", () => {
         const fourthSetup = () => {
@@ -222,6 +232,14 @@ describe("When in the client", () => {
       const thirdSetup = () =>
         secondSetup({ cookiesInClient: {}, cookiesInServer: null });
 
+      it("Needs sync is true", () => {
+        const { key, useCookie } = thirdSetup();
+
+        const { result } = renderHook(() => useCookie(key));
+
+        expect(result.current.needsSync).toBe(true);
+      });
+
       describe("And we call retrieve during RENDER", () => {
         const fourthSetup = () => {
           const thirdSetupReturnValue = thirdSetup();
@@ -261,7 +279,7 @@ describe("When in the client", () => {
     describe("And we call retrieve inside useLayoutEffect", () => {
       const fourthSetup = () => {
         const cookiesInClient = {
-          SomeCookie: JSON.stringify("SomeValue"),
+          SomeCookie: JSON.stringify("SomeOtherValue"),
         };
 
         const thirdSetupReturnValue = secondSetup({
@@ -293,14 +311,14 @@ describe("When in the client", () => {
       it("Returns CLIENT cookie", () => {
         const { retrieveReturnValue } = fourthSetup();
 
-        expect(retrieveReturnValue).toBe("SomeValue");
+        expect(retrieveReturnValue).toBe("SomeOtherValue");
       });
     });
 
     describe("And we call retrieve inside useEffect", () => {
       const fourthSetup = () => {
         const cookiesInClient = {
-          SomeCookie: JSON.stringify("SomeValue"),
+          SomeCookie: JSON.stringify("SomeOtherValue"),
         };
 
         const thirdSetupReturnValue = secondSetup({
@@ -332,7 +350,217 @@ describe("When in the client", () => {
       it("Returns CLIENT cookie", () => {
         const { retrieveReturnValue } = fourthSetup();
 
-        expect(retrieveReturnValue).toBe("SomeValue");
+        expect(retrieveReturnValue).toBe("SomeOtherValue");
+      });
+    });
+  });
+
+  describe("And it is NOT hydrating", () => {
+    type SecondSetupParameters = {
+      cookiesInClient: SetupParameters["cookiesInClient"];
+      cookiesInServer: SetupParameters["cookiesInServer"];
+    };
+
+    const secondSetup = ({
+      cookiesInClient,
+      cookiesInServer,
+    }: SecondSetupParameters) => {
+      const isHydratingRef = {
+        current: false,
+      };
+
+      return setup({ cookiesInClient, cookiesInServer, isHydratingRef });
+    };
+
+    describe("And there are cookies in the server", () => {
+      const thirdSetup = () => {
+        const cookiesInClient = {
+          SomeCookie: JSON.stringify("SomeOtherValue"),
+        };
+
+        const cookiesInServer = {
+          SomeCookie: JSON.stringify("SomeValue"),
+        };
+
+        return {
+          cookiesInClient,
+          cookiesInServer,
+          ...secondSetup({ cookiesInClient, cookiesInServer }),
+        };
+      };
+
+      it("Needs sync is false", () => {
+        const { key, useCookie } = thirdSetup();
+
+        const { result } = renderHook(() => useCookie(key));
+
+        expect(result.current.needsSync).toBe(false);
+      });
+
+      describe("And we call retrieve during RENDER", () => {
+        const fourthSetup = () => {
+          const thirdSetupReturnValue = thirdSetup();
+          const { useCookie, key } = thirdSetupReturnValue;
+
+          let retrieveReturnValue: string;
+
+          const Component = () => {
+            const { retrieve } = useCookie(key);
+            retrieveReturnValue = retrieve() as string;
+
+            return <></>;
+          };
+
+          render(<Component />);
+
+          return {
+            ...thirdSetupReturnValue,
+            retrieveReturnValue: retrieveReturnValue!,
+          };
+        };
+
+        it("Returns CLIENT cookie value", () => {
+          const { retrieveReturnValue } = fourthSetup();
+
+          expect(retrieveReturnValue).toBe("SomeOtherValue");
+        });
+
+        it("Does NOT warn user", () => {
+          const { logger } = fourthSetup();
+
+          expect(logger.warn).not.toHaveBeenCalled();
+        });
+      });
+    });
+
+    describe("And there are NO cookies in the server", () => {
+      const thirdSetup = () =>
+        secondSetup({
+          cookiesInClient: {
+            SomeCookie: JSON.stringify("SomeOtherValue"),
+          },
+          cookiesInServer: null,
+        });
+
+      it("Needs sync is false", () => {
+        const { key, useCookie } = thirdSetup();
+
+        const { result } = renderHook(() => useCookie(key));
+
+        expect(result.current.needsSync).toBe(false);
+      });
+
+      describe("And we call retrieve during RENDER", () => {
+        const fourthSetup = () => {
+          const thirdSetupReturnValue = thirdSetup();
+          const { useCookie, key } = thirdSetupReturnValue;
+
+          let retrieveReturnValue: string;
+
+          const Component = () => {
+            const { retrieve } = useCookie(key);
+            retrieveReturnValue = retrieve() as string;
+
+            return <></>;
+          };
+
+          render(<Component />);
+
+          return {
+            ...thirdSetupReturnValue,
+            retrieveReturnValue: retrieveReturnValue!,
+          };
+        };
+
+        it("Returns CLIENT cookie value", () => {
+          const { retrieveReturnValue } = fourthSetup();
+
+          expect(retrieveReturnValue).toBe("SomeOtherValue");
+        });
+
+        it("Doesn't warn user", () => {
+          const { logger } = fourthSetup();
+
+          expect(logger.warn).not.toHaveBeenCalled();
+        });
+      });
+    });
+
+    describe("And we call retrieve inside useLayoutEffect", () => {
+      const fourthSetup = () => {
+        const cookiesInClient = {
+          SomeCookie: JSON.stringify("SomeOtherValue"),
+        };
+
+        const thirdSetupReturnValue = secondSetup({
+          cookiesInClient,
+          cookiesInServer: null,
+        });
+
+        const { useCookie, key } = thirdSetupReturnValue;
+
+        let retrieveReturnValue: string;
+        const Component = () => {
+          const { retrieve } = useCookie<string>(key);
+
+          useLayoutEffect(() => {
+            retrieveReturnValue = retrieve() as string;
+          }, []);
+
+          return <></>;
+        };
+
+        render(<Component />);
+
+        return {
+          ...thirdSetupReturnValue,
+          retrieveReturnValue: retrieveReturnValue!,
+        };
+      };
+
+      it("Returns CLIENT cookie", () => {
+        const { retrieveReturnValue } = fourthSetup();
+
+        expect(retrieveReturnValue).toBe("SomeOtherValue");
+      });
+    });
+
+    describe("And we call retrieve inside useEffect", () => {
+      const fourthSetup = () => {
+        const cookiesInClient = {
+          SomeCookie: JSON.stringify("SomeOtherValue"),
+        };
+
+        const thirdSetupReturnValue = secondSetup({
+          cookiesInClient,
+          cookiesInServer: null,
+        });
+
+        const { useCookie, key } = thirdSetupReturnValue;
+
+        let retrieveReturnValue: string;
+        const Component = () => {
+          const { retrieve } = useCookie<string>(key);
+
+          useEffect(() => {
+            retrieveReturnValue = retrieve() as string;
+          }, []);
+
+          return <></>;
+        };
+
+        render(<Component />);
+
+        return {
+          ...thirdSetupReturnValue,
+          retrieveReturnValue: retrieveReturnValue!,
+        };
+      };
+
+      it("Returns CLIENT cookie", () => {
+        const { retrieveReturnValue } = fourthSetup();
+
+        expect(retrieveReturnValue).toBe("SomeOtherValue");
       });
     });
   });
