@@ -597,7 +597,8 @@ describe("When in the client", () => {
       expect(Cookies.set).toHaveBeenNthCalledWith(
         1,
         key,
-        JSON.stringify(storedValue)
+        JSON.stringify(storedValue),
+        undefined
       );
     });
   });

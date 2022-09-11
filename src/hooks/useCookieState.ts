@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CookieAttributes } from "../cookies/Cookies";
 import { UseCookie } from "./useCookie";
 import { UseSyncWithCookie } from "./useSyncWithCookie";
 
@@ -25,11 +26,14 @@ export const makeUseClientSideCookieState =
       setValue(storedValue ?? initializer(storedValue));
     };
 
-    const boundStore = () => {
-      store(value);
+    const boundStore = (attributes?: CookieAttributes) => {
+      store(value, attributes);
     };
 
-    const boundClear = clear;
+    const boundClear = (attributes?: CookieAttributes) => {
+      clear(attributes);
+      setValue(initializer(undefined));
+    };
 
     return {
       value,
@@ -47,7 +51,7 @@ type UseServerSideCookieStateDependencies = {
 export const makeUseServerSideCookieState =
   ({ useCookie }: UseServerSideCookieStateDependencies) =>
   <T>(key: string, initializer: (storedValue: T | undefined) => T) => {
-    const { clear, retrieve } = useCookie<T>(key);
+    const { retrieve } = useCookie<T>(key);
 
     const [value, setValue] = useState<T>(() => initializer(retrieve()));
 
@@ -59,11 +63,15 @@ export const makeUseServerSideCookieState =
     // No Op
     const boundStore = () => undefined;
 
+    const boundClear = () => {
+      setValue(initializer(undefined));
+    };
+
     return {
       value,
       setValue,
       retrieve: boundRetrieve,
       store: boundStore,
-      clear,
+      clear: boundClear,
     };
   };

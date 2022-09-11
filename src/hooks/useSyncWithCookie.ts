@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { UseIsomorphicLayoutEffect } from "../hooks/useIsomorphicLayoutEffect";
 import { UseCookie } from "./useCookie";
 

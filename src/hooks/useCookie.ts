@@ -1,11 +1,18 @@
-import Cookies from "js-cookie";
 import { Logger } from "../utils/logger";
 import { useCookiesInServer } from "./useCookiesInServer";
 import { UseIsomorphicLayoutEffect } from "./useIsomorphicLayoutEffect";
+import { CookieAttributes, Cookies } from "../cookies/Cookies";
+
+export type UseCookie = <T>(key: string) => {
+  retrieve: () => T | undefined;
+  store: (data: T, attributes?: CookieAttributes) => void;
+  clear: (attributes?: CookieAttributes) => void;
+  needsSync: boolean;
+};
 
 type UseClientSideCookiesDependencies = {
   useCookiesInServer: typeof useCookiesInServer;
-  Cookies: typeof Cookies;
+  Cookies: Cookies;
   useIsomorphicLayoutEffect: UseIsomorphicLayoutEffect;
   logger: Logger;
 };
@@ -24,12 +31,10 @@ export const makeUseClientSideCookie =
     const needsSync = noCookiesInServer && isHydratingRef.current;
 
     useIsomorphicLayoutEffect(() => {
-      // HACK (Kinda)
       isHydratingRef.current = false;
     }, []);
 
     const retrieve = (): T | undefined => {
-      // HACK (Kinda)
       // Here we want to have the freshest value possible
       const needsSyncAfterHydration =
         noCookiesInServer && isHydratingRef.current;
@@ -54,11 +59,13 @@ export const makeUseClientSideCookie =
       return JSON.parse(serializedData);
     };
 
-    const store = (data: T) => {
-      Cookies.set(key, JSON.stringify(data));
+    const store = (data: T, attributes?: CookieAttributes) => {
+      Cookies.set(key, JSON.stringify(data), attributes);
     };
 
-    const clear = () => Cookies.remove(key);
+    const clear = (attributes?: CookieAttributes) => {
+      Cookies.remove(key, attributes);
+    };
 
     return {
       store,
@@ -96,7 +103,3 @@ export const makeUseServerSideCookie =
       needsSync,
     };
   };
-
-export type UseCookie =
-  | ReturnType<typeof makeUseClientSideCookie>
-  | ReturnType<typeof makeUseServerSideCookie>;
