@@ -1,14 +1,36 @@
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { CookieAttributes } from "../cookies/Cookies";
 import { identity } from "../utils/identity";
+import { updatedValueFromUpdater, Updater } from "../utils/updater";
 import { UseCookie } from "./useCookie";
 import { UseSyncWithCookie } from "./useSyncWithCookie";
 
-type UseCookieStateOptions<T> = {
-  autoStore?: AutoStore<T>;
+export type UseCookieState<T> = (
+  key: string,
+  initializer: (storedValue: T | undefined) => T,
+  options?: UseCookieStateOptions<T>
+) => {
+  value: T;
+  setValue: Dispatch<SetStateAction<T>>;
+  retrieve: (options?: {
+    deserializer?: (storedValue: T | undefined) => T;
+  }) => void;
+  store: (
+    value: T,
+    options?: {
+      attributes?: CookieAttributes;
+      serializer?: (storedValue: T | undefined) => T;
+    }
+  ) => void;
+  clear: () => void;
+  needsSync: boolean;
 };
 
-type AutoStore<T> =
+type UseCookieStateOptions<T> = {
+  storeOnSet?: StoreOnSetOption<T>;
+};
+
+type StoreOnSetOption<T> =
   | true
   | false
   | {
@@ -30,7 +52,7 @@ export const makeUseClientSideCookieState =
   ) => {
     const { retrieve, store, clear, needsSync } = useCookie<T>(key);
 
-    const { autoStore = true } = options ?? {};
+    const { storeOnSet = true } = options ?? {};
 
     const [value, setValue] = useState<T>(() =>
       initializer(needsSync ? undefined : retrieve())
@@ -55,15 +77,15 @@ export const makeUseClientSideCookieState =
       setValue(deserializer(storedValue));
     };
 
-    const boundStore = (options?: {
-      attributes?: CookieAttributes;
-      serializer?: (value: T) => T;
-    }) => {
-      const { attributes, serializer = identity } = options ?? {};
+    const boundStore = (
+      value: T,
+      options?: {
+        attributes?: CookieAttributes;
+      }
+    ) => {
+      const { attributes } = options ?? {};
 
-      const valueToBePersisted = serializer(value);
-
-      store(valueToBePersisted, attributes);
+      store(value, attributes);
     };
 
     const boundClear = () => {
@@ -71,17 +93,28 @@ export const makeUseClientSideCookieState =
       setValue(initializer(undefined));
     };
 
-    const decoratedSetValue = (...args: Parameters<typeof setValue>) => {
-      setValue(...args);
+    const decoratedSetValue = (updater: Updater<T>) => {
+      setValue((currentValue) => {
+        const updatedValue = updatedValueFromUpdater(currentValue, updater);
 
-      if (Boolean(autoStore)) {
-        boundStore();
-      }
+        if (Boolean(storeOnSet)) {
+          const { attributes = {}, serializer = identity } =
+            storeOnSet as Exclude<StoreOnSetOption<T>, boolean>;
+
+          const valueToBeStored = serializer(updatedValue);
+
+          boundStore(valueToBeStored, {
+            attributes,
+          });
+        }
+
+        return updatedValue;
+      });
     };
 
     return {
       value,
-      setValue,
+      setValue: decoratedSetValue,
       retrieve: boundRetrieve,
       store: boundStore,
       clear: boundClear,
