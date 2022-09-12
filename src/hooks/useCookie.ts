@@ -63,8 +63,8 @@ export const makeUseClientSideCookie =
       Cookies.set(key, JSON.stringify(data), attributes);
     };
 
-    const clear = (attributes?: CookieAttributes) => {
-      Cookies.remove(key, attributes);
+    const clear = () => {
+      Cookies.remove(key);
     };
 
     return {

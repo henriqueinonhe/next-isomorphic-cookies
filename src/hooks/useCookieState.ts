@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CookieAttributes } from "../cookies/Cookies";
+import { identity } from "../utils/identity";
 import { UseCookie } from "./useCookie";
 import { UseSyncWithCookie } from "./useSyncWithCookie";
 
@@ -21,17 +22,34 @@ export const makeUseClientSideCookieState =
       boundRetrieve();
     });
 
-    const boundRetrieve = () => {
+    const boundRetrieve = (options?: {
+      deserializer?: (storedValue: T | undefined) => T;
+    }) => {
+      const { deserializer } = options ?? {};
+
       const storedValue = retrieve();
-      setValue(storedValue ?? initializer(storedValue));
+
+      if (deserializer === undefined) {
+        setValue(storedValue ?? initializer(storedValue));
+        return;
+      }
+
+      setValue(deserializer(storedValue));
     };
 
-    const boundStore = (attributes?: CookieAttributes) => {
-      store(value, attributes);
+    const boundStore = (options?: {
+      attributes?: CookieAttributes;
+      serializer?: (value: T) => T;
+    }) => {
+      const { attributes, serializer = identity } = options ?? {};
+
+      const valueToBePersisted = serializer(value);
+
+      store(valueToBePersisted, attributes);
     };
 
-    const boundClear = (attributes?: CookieAttributes) => {
-      clear(attributes);
+    const boundClear = () => {
+      clear();
       setValue(initializer(undefined));
     };
 
