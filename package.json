@@ -1,6 +1,6 @@
 {
   "name": "next-isomorphic-cookies",
-  "version": "1.0.0-alpha",
+  "version": "1.0.0-alpha.0",
   "description": "Simplest state management for React.",
   "main": "dist/index.js",
   "scripts": {
