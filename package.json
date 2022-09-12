@@ -1,7 +1,7 @@
 {
   "name": "next-isomorphic-cookies",
   "version": "1.0.0-alpha.1",
-  "description": "Simplest state management for React.",
+  "description": "",
   "main": "dist/index.js",
   "scripts": {
     "prepublishOnly": "npx tsc",

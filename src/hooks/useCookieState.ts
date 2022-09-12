@@ -4,6 +4,18 @@ import { identity } from "../utils/identity";
 import { UseCookie } from "./useCookie";
 import { UseSyncWithCookie } from "./useSyncWithCookie";
 
+type UseCookieStateOptions<T> = {
+  autoStore?: AutoStore<T>;
+};
+
+type AutoStore<T> =
+  | true
+  | false
+  | {
+      attributes?: CookieAttributes;
+      serializer?: (value: T) => T;
+    };
+
 type UseClientSideCookieStateDependencies = {
   useCookie: UseCookie;
   useSyncWithCookie: UseSyncWithCookie;
@@ -11,8 +23,14 @@ type UseClientSideCookieStateDependencies = {
 
 export const makeUseClientSideCookieState =
   ({ useCookie, useSyncWithCookie }: UseClientSideCookieStateDependencies) =>
-  <T>(key: string, initializer: (storedValue: T | undefined) => T) => {
+  <T>(
+    key: string,
+    initializer: (storedValue: T | undefined) => T,
+    options?: UseCookieStateOptions<T>
+  ) => {
     const { retrieve, store, clear, needsSync } = useCookie<T>(key);
+
+    const { autoStore = true } = options ?? {};
 
     const [value, setValue] = useState<T>(() =>
       initializer(needsSync ? undefined : retrieve())
@@ -53,12 +71,21 @@ export const makeUseClientSideCookieState =
       setValue(initializer(undefined));
     };
 
+    const decoratedSetValue = (...args: Parameters<typeof setValue>) => {
+      setValue(...args);
+
+      if (Boolean(autoStore)) {
+        boundStore();
+      }
+    };
+
     return {
       value,
       setValue,
       retrieve: boundRetrieve,
       store: boundStore,
       clear: boundClear,
+      needsSync,
     };
   };
 
@@ -69,7 +96,7 @@ type UseServerSideCookieStateDependencies = {
 export const makeUseServerSideCookieState =
   ({ useCookie }: UseServerSideCookieStateDependencies) =>
   <T>(key: string, initializer: (storedValue: T | undefined) => T) => {
-    const { retrieve } = useCookie<T>(key);
+    const { retrieve, needsSync } = useCookie<T>(key);
 
     const [value, setValue] = useState<T>(() => initializer(retrieve()));
 
@@ -91,5 +118,6 @@ export const makeUseServerSideCookieState =
       retrieve: boundRetrieve,
       store: boundStore,
       clear: boundClear,
+      needsSync,
     };
   };
