@@ -41,7 +41,7 @@ export const makeUseClientSideCookie =
 
       if (needsSyncAfterHydration) {
         logger.warn(
-          "This page did not receive initial cookies (either because it uses SSG or because you didn't wrap getServerSideProps with withCokiesGetServerSidePropsWrapper) and you're calling retrieve during hydration, so your data will probably not be initialized correctly.\nTo prevent hydration mismatches, every time retrieve is called during hydration, it returns the cookie value that was sent to the server, which, in this case, is undefined."
+          "This page did not receive initial cookies (either because it uses SSG or because you didn't wrap getServerSideProps with withCokiesGetServerSidePropsWrapper) and you're calling retrieve during hydration, so your data will probably not be initialized correctly.\nTo prevent hydration mismatches, every time retrieve is called during hydration, it returns the cookie value that was sent by the server, which, in this case, is undefined."
         );
       }
 

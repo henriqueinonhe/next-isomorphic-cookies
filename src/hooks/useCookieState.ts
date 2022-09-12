@@ -1,8 +1,42 @@
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { CookieAttributes } from "../cookies/Cookies";
 import { identity } from "../utils/identity";
+import { updatedValueFromUpdater, Updater } from "../utils/updater";
 import { UseCookie } from "./useCookie";
 import { UseSyncWithCookie } from "./useSyncWithCookie";
+
+export type UseCookieState<T> = (
+  key: string,
+  initializer: (storedValue: T | undefined) => T,
+  options?: UseCookieStateOptions<T>
+) => {
+  value: T;
+  setValue: Dispatch<SetStateAction<T>>;
+  retrieve: (options?: {
+    deserializer?: (storedValue: T | undefined) => T;
+  }) => void;
+  store: (
+    value: T,
+    options?: {
+      attributes?: CookieAttributes;
+      serializer?: (storedValue: T | undefined) => T;
+    }
+  ) => void;
+  clear: () => void;
+  needsSync: boolean;
+};
+
+type UseCookieStateOptions<T> = {
+  storeOnSet?: StoreOnSetOption<T>;
+};
+
+type StoreOnSetOption<T> =
+  | true
+  | false
+  | {
+      attributes?: CookieAttributes;
+      serializer?: (value: T) => T;
+    };
 
 type UseClientSideCookieStateDependencies = {
   useCookie: UseCookie;
@@ -11,15 +45,26 @@ type UseClientSideCookieStateDependencies = {
 
 export const makeUseClientSideCookieState =
   ({ useCookie, useSyncWithCookie }: UseClientSideCookieStateDependencies) =>
-  <T>(key: string, initializer: (storedValue: T | undefined) => T) => {
+  <T>(
+    key: string,
+    initializer: (storedValue: T | undefined) => T,
+    options?: UseCookieStateOptions<T>
+  ) => {
     const { retrieve, store, clear, needsSync } = useCookie<T>(key);
+
+    const { storeOnSet = true } = options ?? {};
 
     const [value, setValue] = useState<T>(() =>
       initializer(needsSync ? undefined : retrieve())
     );
 
     useSyncWithCookie<T>(key, () => {
-      boundRetrieve();
+      const storedValue = retrieve();
+
+      // This is a kind of re-initialization
+      // of the state, thus we call the
+      // stored value with the initializer
+      setValue(initializer(storedValue));
     });
 
     const boundRetrieve = (options?: {
@@ -30,6 +75,10 @@ export const makeUseClientSideCookieState =
       const storedValue = retrieve();
 
       if (deserializer === undefined) {
+        // If there is no stored value
+        // we reset the component to it's
+        // "default value" by calling
+        // the initializer with undefined
         setValue(storedValue ?? initializer(storedValue));
         return;
       }
@@ -37,15 +86,15 @@ export const makeUseClientSideCookieState =
       setValue(deserializer(storedValue));
     };
 
-    const boundStore = (options?: {
-      attributes?: CookieAttributes;
-      serializer?: (value: T) => T;
-    }) => {
-      const { attributes, serializer = identity } = options ?? {};
+    const boundStore = (
+      value: T,
+      options?: {
+        attributes?: CookieAttributes;
+      }
+    ) => {
+      const { attributes } = options ?? {};
 
-      const valueToBePersisted = serializer(value);
-
-      store(valueToBePersisted, attributes);
+      store(value, attributes);
     };
 
     const boundClear = () => {
@@ -53,12 +102,32 @@ export const makeUseClientSideCookieState =
       setValue(initializer(undefined));
     };
 
+    const decoratedSetValue = (updater: Updater<T>) => {
+      setValue((currentValue) => {
+        const updatedValue = updatedValueFromUpdater(currentValue, updater);
+
+        if (Boolean(storeOnSet)) {
+          const { attributes = {}, serializer = identity } =
+            storeOnSet as Exclude<StoreOnSetOption<T>, boolean>;
+
+          const valueToBeStored = serializer(updatedValue);
+
+          boundStore(valueToBeStored, {
+            attributes,
+          });
+        }
+
+        return updatedValue;
+      });
+    };
+
     return {
       value,
-      setValue,
+      setValue: decoratedSetValue,
       retrieve: boundRetrieve,
       store: boundStore,
       clear: boundClear,
+      isSyncing: needsSync,
     };
   };
 
@@ -69,7 +138,7 @@ type UseServerSideCookieStateDependencies = {
 export const makeUseServerSideCookieState =
   ({ useCookie }: UseServerSideCookieStateDependencies) =>
   <T>(key: string, initializer: (storedValue: T | undefined) => T) => {
-    const { retrieve } = useCookie<T>(key);
+    const { retrieve, needsSync } = useCookie<T>(key);
 
     const [value, setValue] = useState<T>(() => initializer(retrieve()));
 
@@ -91,5 +160,6 @@ export const makeUseServerSideCookieState =
       retrieve: boundRetrieve,
       store: boundStore,
       clear: boundClear,
+      isSyncing: needsSync,
     };
   };

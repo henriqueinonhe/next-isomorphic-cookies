@@ -339,6 +339,14 @@ describe("When in the client", () => {
         expect(initialValueProbe).toBe("Initial Value");
       });
 
+      it("State is synced after hydration by calling initializer with client cookie value", () => {
+        const { useCookieState, key, initializer } = thirdSetup();
+
+        const { result } = renderHook(() => useCookieState(key, initializer));
+
+        expect(result.current.value).toBe(initializer("Cookie Client Value"));
+      });
+
       describe("And we call retrieve without a serializer during hydration", () => {
         const fourthSetup = () => {
           const thirdSetupReturnValue = thirdSetup();
@@ -368,6 +376,62 @@ describe("When in the client", () => {
           const { valueProbe } = fourthSetup();
 
           expect(valueProbe[1]).toBe("Initial Value");
+        });
+      });
+
+      describe("And we render useCookieState more than once, in different depths of the component tree", () => {
+        const fourthSetup = () => {
+          const setupReturnValue = thirdSetup();
+          const { initializer, key, useCookieState } = setupReturnValue;
+
+          const parentValueProbe: Array<string> = [];
+          const grandChildValueProbe: Array<string> = [];
+
+          const Parent = () => {
+            const { value } = useCookieState(key, initializer);
+
+            parentValueProbe.push(value);
+
+            return <Child />;
+          };
+
+          const Child = () => {
+            return <GrandChild />;
+          };
+
+          const GrandChild = () => {
+            const { value } = useCookieState(key, initializer);
+
+            grandChildValueProbe.push(value);
+
+            return <></>;
+          };
+
+          render(<Parent />);
+
+          return {
+            ...setupReturnValue,
+            parentValueProbe,
+            grandChildValueProbe,
+          };
+        };
+
+        it("First value of all hooks is the initial value", () => {
+          const { parentValueProbe, grandChildValueProbe, initializer } =
+            fourthSetup();
+
+          expect(parentValueProbe[0]).toBe(initializer(undefined));
+          expect(grandChildValueProbe[0]).toBe(initializer(undefined));
+        });
+
+        it("Second value of all hooks is the initializer applied to the client cookie value", () => {
+          const { parentValueProbe, grandChildValueProbe, initializer } =
+            fourthSetup();
+
+          expect(parentValueProbe[1]).toBe(initializer("Cookie Client Value"));
+          expect(grandChildValueProbe[1]).toBe(
+            initializer("Cookie Client Value")
+          );
         });
       });
     });
@@ -483,51 +547,7 @@ describe("When in the client", () => {
     });
   });
 
-  describe("And we call store with a serializer", () => {
-    const secondSetup = () => {
-      const isHydratingRef = {
-        current: false,
-      };
-
-      const setupReturnValue = setup({
-        cookiesInServer: {
-          SomeCookie: JSON.stringify("Some Value"),
-        },
-        isHydratingRef,
-      });
-      const { initializer, key, useCookieState } = setupReturnValue;
-
-      const serializer = (value: string) => value.toLowerCase();
-
-      const renderHookReturnValue = renderHook(() =>
-        useCookieState(key, initializer)
-      );
-
-      act(() => {
-        renderHookReturnValue.result.current.store({
-          serializer,
-        });
-      });
-
-      return {
-        ...setupReturnValue,
-        renderHookReturnValue,
-      };
-    };
-
-    it("Stores transformed value", () => {
-      const { Cookies, key } = secondSetup();
-
-      expect(Cookies.set).toHaveBeenNthCalledWith(
-        1,
-        key,
-        JSON.stringify("cookie client value"),
-        undefined
-      );
-    });
-  });
-
-  describe("And we call store without a serializer", () => {
+  describe("And we call store", () => {
     const secondSetup = () => {
       const isHydratingRef = {
         current: false,
@@ -546,7 +566,9 @@ describe("When in the client", () => {
       );
 
       act(() => {
-        renderHookReturnValue.result.current.store();
+        renderHookReturnValue.result.current.store(
+          renderHookReturnValue.result.current.value
+        );
       });
 
       return {
@@ -605,6 +627,193 @@ describe("When in the client", () => {
       const { renderHookReturnValue } = secondSetup();
 
       expect(renderHookReturnValue.result.current.value).toBe("Initial Value");
+    });
+  });
+
+  describe("And we're using the default storeOnSet", () => {
+    const secondSetup = () => {
+      const isHydratingRef = {
+        current: false,
+      };
+
+      const setupReturnValue = setup({
+        isHydratingRef,
+        cookiesInServer: null,
+      });
+
+      const { key, initializer, useCookieState } = setupReturnValue;
+
+      const renderHookReturnValue = renderHook(() =>
+        useCookieState(key, initializer)
+      );
+
+      return {
+        ...setupReturnValue,
+        renderHookReturnValue,
+      };
+    };
+
+    describe("And we call setValue", () => {
+      const thirdSetup = () => {
+        const secondSetupReturnValue = secondSetup();
+        const { renderHookReturnValue } = secondSetupReturnValue;
+
+        const valuePassedToSetter = "Some New Value";
+
+        act(() => {
+          renderHookReturnValue.result.current.setValue(valuePassedToSetter);
+        });
+
+        return {
+          ...secondSetupReturnValue,
+          valuePassedToSetter,
+        };
+      };
+
+      it("Sets value", () => {
+        const { renderHookReturnValue, valuePassedToSetter } = thirdSetup();
+
+        expect(renderHookReturnValue.result.current.value).toBe(
+          valuePassedToSetter
+        );
+      });
+
+      it("Stores value with identity function as serializer", () => {
+        const { valuePassedToSetter, Cookies, key } = thirdSetup();
+
+        expect(Cookies.set).toHaveBeenNthCalledWith(
+          1,
+          key,
+          JSON.stringify(valuePassedToSetter),
+          {}
+        );
+      });
+    });
+  });
+
+  describe("And storeOnSet is false", () => {
+    const secondSetup = () => {
+      const isHydratingRef = {
+        current: false,
+      };
+
+      const setupReturnValue = setup({
+        isHydratingRef,
+        cookiesInServer: null,
+      });
+
+      const { key, initializer, useCookieState } = setupReturnValue;
+
+      const renderHookReturnValue = renderHook(() =>
+        useCookieState(key, initializer, {
+          storeOnSet: false,
+        })
+      );
+
+      return {
+        ...setupReturnValue,
+        renderHookReturnValue,
+      };
+    };
+
+    describe("And we call setValue", () => {
+      const thirdSetup = () => {
+        const secondSetupReturnValue = secondSetup();
+        const { renderHookReturnValue } = secondSetupReturnValue;
+
+        const valuePassedToSetter = "Some New Value";
+
+        act(() => {
+          renderHookReturnValue.result.current.setValue(valuePassedToSetter);
+        });
+
+        return {
+          ...secondSetupReturnValue,
+          valuePassedToSetter,
+        };
+      };
+
+      it("Sets value", () => {
+        const { renderHookReturnValue, valuePassedToSetter } = thirdSetup();
+
+        expect(renderHookReturnValue.result.current.value).toBe(
+          valuePassedToSetter
+        );
+      });
+
+      it("Doesn't store value", () => {
+        const { valuePassedToSetter, Cookies, key } = thirdSetup();
+
+        expect(Cookies.set).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe("And storeOnSet is an object with a custom serializer", () => {
+    const secondSetup = () => {
+      const isHydratingRef = {
+        current: false,
+      };
+
+      const setupReturnValue = setup({
+        isHydratingRef,
+        cookiesInServer: null,
+      });
+
+      const { key, initializer, useCookieState } = setupReturnValue;
+
+      const serializer = (string: string) => string.toUpperCase();
+
+      const renderHookReturnValue = renderHook(() =>
+        useCookieState(key, initializer, {
+          storeOnSet: {
+            serializer,
+          },
+        })
+      );
+
+      return {
+        ...setupReturnValue,
+        renderHookReturnValue,
+        serializer,
+      };
+    };
+
+    describe("And we call setValue", () => {
+      const thirdSetup = () => {
+        const secondSetupReturnValue = secondSetup();
+        const { renderHookReturnValue } = secondSetupReturnValue;
+
+        const valuePassedToSetter = "Some New Value";
+
+        act(() => {
+          renderHookReturnValue.result.current.setValue(valuePassedToSetter);
+        });
+
+        return {
+          ...secondSetupReturnValue,
+          valuePassedToSetter,
+        };
+      };
+
+      it("Sets value", () => {
+        const { renderHookReturnValue, valuePassedToSetter } = thirdSetup();
+
+        expect(renderHookReturnValue.result.current.value).toBe(
+          valuePassedToSetter
+        );
+      });
+
+      it("Stores value transformed by serializer", () => {
+        const { valuePassedToSetter, Cookies, key, serializer } = thirdSetup();
+
+        expect(Cookies.set).toHaveBeenNthCalledWith(
+          1,
+          key,
+          JSON.stringify(serializer(valuePassedToSetter)),
+          {}
+        );
+      });
     });
   });
 });
