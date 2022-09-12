@@ -12,6 +12,8 @@ import {
 } from "./hooks/useCookieState";
 import { makeUseSyncWithCookie } from "./hooks/useSyncWithCookie";
 import { devLogger, prodLogger } from "./utils/logger";
+import { withCookiesAppWrapper } from "./wrappers/withCookiesAppWrapper";
+import { withCookiesGetServerSidePropsWrapper } from "./wrappers/withCookiesGetServerSidePropsWrapper";
 
 const logger = process.env.NODE_ENV === "production" ? prodLogger : devLogger;
 
@@ -42,4 +44,10 @@ const useCookieState = isServer()
       useSyncWithCookie,
     });
 
-export { useCookie, useSyncWithCookie, useCookieState };
+export {
+  useCookie,
+  useSyncWithCookie,
+  useCookieState,
+  withCookiesAppWrapper,
+  withCookiesGetServerSidePropsWrapper,
+};

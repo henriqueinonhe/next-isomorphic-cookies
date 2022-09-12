@@ -1,6 +1,6 @@
 {
   "name": "next-isomorphic-cookies",
-  "version": "0.0.1",
+  "version": "1.0.0-alpha",
   "description": "Simplest state management for React.",
   "main": "dist/index.js",
   "scripts": {
@@ -11,7 +11,8 @@
     "next",
     "react",
     "cookies",
-    "isomorphic"
+    "isomorphic",
+    "universal"
   ],
   "author": "Henrique Yuji Rossetti Inonhe <henriqueinonhe@gmail.com>",
   "license": "MIT",

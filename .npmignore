@@ -3,3 +3,6 @@ tsconfig.json
 .gitignore
 .vscode
 src
+coverage
+jest-setup.js
+jest.config.js
