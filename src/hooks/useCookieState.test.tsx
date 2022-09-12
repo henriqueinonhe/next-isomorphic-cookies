@@ -339,6 +339,14 @@ describe("When in the client", () => {
         expect(initialValueProbe).toBe("Initial Value");
       });
 
+      it("State is synced after hydration by calling initializer with client cookie value", () => {
+        const { useCookieState, key, initializer } = thirdSetup();
+
+        const { result } = renderHook(() => useCookieState(key, initializer));
+
+        expect(result.current.value).toBe(initializer("Cookie Client Value"));
+      });
+
       describe("And we call retrieve without a serializer during hydration", () => {
         const fourthSetup = () => {
           const thirdSetupReturnValue = thirdSetup();
@@ -368,6 +376,62 @@ describe("When in the client", () => {
           const { valueProbe } = fourthSetup();
 
           expect(valueProbe[1]).toBe("Initial Value");
+        });
+      });
+
+      describe("And we render useCookieState more than once, in different depths of the component tree", () => {
+        const fourthSetup = () => {
+          const setupReturnValue = thirdSetup();
+          const { initializer, key, useCookieState } = setupReturnValue;
+
+          const parentValueProbe: Array<string> = [];
+          const grandChildValueProbe: Array<string> = [];
+
+          const Parent = () => {
+            const { value } = useCookieState(key, initializer);
+
+            parentValueProbe.push(value);
+
+            return <Child />;
+          };
+
+          const Child = () => {
+            return <GrandChild />;
+          };
+
+          const GrandChild = () => {
+            const { value } = useCookieState(key, initializer);
+
+            grandChildValueProbe.push(value);
+
+            return <></>;
+          };
+
+          render(<Parent />);
+
+          return {
+            ...setupReturnValue,
+            parentValueProbe,
+            grandChildValueProbe,
+          };
+        };
+
+        it("First value of all hooks is the initial value", () => {
+          const { parentValueProbe, grandChildValueProbe, initializer } =
+            fourthSetup();
+
+          expect(parentValueProbe[0]).toBe(initializer(undefined));
+          expect(grandChildValueProbe[0]).toBe(initializer(undefined));
+        });
+
+        it("Second value of all hooks is the initializer applied to the client cookie value", () => {
+          const { parentValueProbe, grandChildValueProbe, initializer } =
+            fourthSetup();
+
+          expect(parentValueProbe[1]).toBe(initializer("Cookie Client Value"));
+          expect(grandChildValueProbe[1]).toBe(
+            initializer("Cookie Client Value")
+          );
         });
       });
     });

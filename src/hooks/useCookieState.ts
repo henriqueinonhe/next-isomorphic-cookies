@@ -59,7 +59,12 @@ export const makeUseClientSideCookieState =
     );
 
     useSyncWithCookie<T>(key, () => {
-      boundRetrieve();
+      const storedValue = retrieve();
+
+      // This is a kind of re-initialization
+      // of the state, thus we call the
+      // stored value with the initializer
+      setValue(initializer(storedValue));
     });
 
     const boundRetrieve = (options?: {
@@ -70,6 +75,10 @@ export const makeUseClientSideCookieState =
       const storedValue = retrieve();
 
       if (deserializer === undefined) {
+        // If there is no stored value
+        // we reset the component to it's
+        // "default value" by calling
+        // the initializer with undefined
         setValue(storedValue ?? initializer(storedValue));
         return;
       }
@@ -118,7 +127,7 @@ export const makeUseClientSideCookieState =
       retrieve: boundRetrieve,
       store: boundStore,
       clear: boundClear,
-      needsSync,
+      isSyncing: needsSync,
     };
   };
 
@@ -151,6 +160,6 @@ export const makeUseServerSideCookieState =
       retrieve: boundRetrieve,
       store: boundStore,
       clear: boundClear,
-      needsSync,
+      isSyncing: needsSync,
     };
   };
