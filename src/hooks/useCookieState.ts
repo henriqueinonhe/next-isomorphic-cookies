@@ -6,27 +6,95 @@ import { UseCookie } from "./useCookie";
 import { UseSyncWithCookie } from "./useSyncWithCookie";
 
 export type UseCookieState<T> = (
+  /**
+   * Cookie key/name.
+   */
   key: string,
+
+  /**
+   * Function that is called to initialize
+   * the state value and, in cases where
+   * cookies are not available on the server,
+   * again after hydration.
+   */
   initializer: (storedValue: T | undefined) => T,
+
   options?: UseCookieStateOptions<T>
 ) => {
+  /**
+   * Pretty much like the value you'd get
+   * when calling `useState`.
+   */
   value: T;
+
+  /**
+   * Pretty much like the setter you'd get
+   * when calling `useState`.
+   *
+   * When `storeOnSet` option is enabled,
+   * everytime this is called, it also
+   * stores the value it was called with
+   * in the cookie.
+   */
   setValue: Dispatch<SetStateAction<T>>;
+
+  /**
+   * Reads value off cookie and calls sets
+   * `value` to it.
+   *
+   * You may optionally pass a `deserializer`
+   * that transforms the cookie value before
+   * setting value to it.
+   */
   retrieve: (options?: {
+    /**
+     * Transforms the cookie value before
+     * setting value to it.
+     *
+     * Defaults to identity function.
+     */
     deserializer?: (storedValue: T | undefined) => T;
   }) => void;
+
+  /**
+   * Stores value in cookie.
+   */
   store: (
+    /**
+     * Value to be stored.
+     */
     value: T,
+
     options?: {
+      /**
+       * js-cookie attributes
+       */
       attributes?: CookieAttributes;
+      /**
+       * Transforms the value before
+       * it is stored.
+       *
+       * Defaults to identity function.
+       */
       serializer?: (storedValue: T | undefined) => T;
     }
   ) => void;
   clear: () => void;
-  needsSync: boolean;
+  isSyncing: boolean;
 };
 
 type UseCookieStateOptions<T> = {
+  /**
+   * Defaults to true.
+   *
+   * Whether the value should be stored
+   * in the cookie everytime setValue
+   * is called.
+   *
+   * It is possible to pass a serializer
+   * that will transform the value
+   * before it is stored as a cookie.
+   */
   storeOnSet?: StoreOnSetOption<T>;
 };
 
@@ -34,7 +102,17 @@ type StoreOnSetOption<T> =
   | true
   | false
   | {
+      /**
+       * js-cookie attributes
+       */
       attributes?: CookieAttributes;
+
+      /**
+       * Transforms the value before
+       * it is stored.
+       *
+       * Defaults to identity function.
+       */
       serializer?: (value: T) => T;
     };
 
