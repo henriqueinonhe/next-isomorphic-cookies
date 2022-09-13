@@ -4,9 +4,35 @@ import { UseIsomorphicLayoutEffect } from "./useIsomorphicLayoutEffect";
 import { CookieAttributes, Cookies } from "../cookies/Cookies";
 
 export type UseCookie = <T>(key: string) => {
+  /**
+   * Retrieves cookie value.
+   *
+   * In the server **and during hydration**, ALWAYS
+   * returns the server cookie value, to prevent
+   * hydration mismatches.
+   *
+   * After hydration, returns the client cookie value.
+   */
   retrieve: () => T | undefined;
+
+  /**
+   * Stores value in cookie.
+   */
   store: (data: T, attributes?: CookieAttributes) => void;
+
+  /**
+   * Clear cookie value.
+   */
   clear: (attributes?: CookieAttributes) => void;
+
+  /**
+   * True whenever there are no cookies in the server, either because
+   * we're using SSG, or because we didn't wrap `getServerSideProps`
+   * with `withCookiesGetServerSideWrapper` AND it is hydrating.
+   *
+   * This indicates that we need to synchronize React state
+   * with client side cookie value after hydration.
+   */
   needsSync: boolean;
 };
 
