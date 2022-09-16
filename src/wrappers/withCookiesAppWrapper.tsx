@@ -19,7 +19,7 @@ export const withCookiesAppWrapper = <P extends {}>(
 ): AppWithCookies<P> => {
   // We need to create this outside the component,
   // because it might get remounted
-  let isHydratingRef = {
+  const isHydratingRef = {
     current: true,
   };
 

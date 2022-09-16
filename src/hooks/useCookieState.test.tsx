@@ -742,7 +742,7 @@ describe("When in the client", () => {
       });
 
       it("Doesn't store value", () => {
-        const { valuePassedToSetter, Cookies, key } = thirdSetup();
+        const { Cookies } = thirdSetup();
 
         expect(Cookies.set).not.toHaveBeenCalled();
       });

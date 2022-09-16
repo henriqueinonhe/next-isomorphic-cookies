@@ -1,4 +1,4 @@
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction, useCallback, useState } from "react";
 import { CookieAttributes } from "../cookies/Cookies";
 import { identity } from "../utils/identity";
 import { updatedValueFromUpdater, Updater } from "../utils/updater";
@@ -145,59 +145,66 @@ export const makeUseClientSideCookieState =
       setValue(initializer(storedValue));
     });
 
-    const boundRetrieve = (options?: {
-      deserializer?: (storedValue: T | undefined) => T;
-    }) => {
-      const { deserializer } = options ?? {};
+    const boundRetrieve = useCallback(
+      (options?: { deserializer?: (storedValue: T | undefined) => T }) => {
+        const { deserializer } = options ?? {};
 
-      const storedValue = retrieve();
+        const storedValue = retrieve();
 
-      if (deserializer === undefined) {
-        // If there is no stored value
-        // we reset the component to it's
-        // "default value" by calling
-        // the initializer with undefined
-        setValue(storedValue ?? initializer(storedValue));
-        return;
-      }
-
-      setValue(deserializer(storedValue));
-    };
-
-    const boundStore = (
-      value: T,
-      options?: {
-        attributes?: CookieAttributes;
-      }
-    ) => {
-      const { attributes } = options ?? {};
-
-      store(value, attributes);
-    };
-
-    const boundClear = () => {
-      clear();
-      setValue(initializer(undefined));
-    };
-
-    const decoratedSetValue = (updater: Updater<T>) => {
-      setValue((currentValue) => {
-        const updatedValue = updatedValueFromUpdater(currentValue, updater);
-
-        if (Boolean(storeOnSet)) {
-          const { attributes = {}, serializer = identity } =
-            storeOnSet as Exclude<StoreOnSetOption<T>, boolean>;
-
-          const valueToBeStored = serializer(updatedValue);
-
-          boundStore(valueToBeStored, {
-            attributes,
-          });
+        if (deserializer === undefined) {
+          // If there is no stored value
+          // we reset the component to it's
+          // "default value" by calling
+          // the initializer with undefined
+          setValue(storedValue ?? initializer(storedValue));
+          return;
         }
 
-        return updatedValue;
-      });
-    };
+        setValue(deserializer(storedValue));
+      },
+      [initializer, retrieve]
+    );
+
+    const boundStore = useCallback(
+      (
+        value: T,
+        options?: {
+          attributes?: CookieAttributes;
+        }
+      ) => {
+        const { attributes } = options ?? {};
+
+        store(value, attributes);
+      },
+      [store]
+    );
+
+    const boundClear = useCallback(() => {
+      clear();
+      setValue(initializer(undefined));
+    }, [clear, initializer]);
+
+    const decoratedSetValue = useCallback(
+      (updater: Updater<T>) => {
+        setValue((currentValue) => {
+          const updatedValue = updatedValueFromUpdater(currentValue, updater);
+
+          if (Boolean(storeOnSet)) {
+            const { attributes = {}, serializer = identity } =
+              storeOnSet as Exclude<StoreOnSetOption<T>, boolean>;
+
+            const valueToBeStored = serializer(updatedValue);
+
+            boundStore(valueToBeStored, {
+              attributes,
+            });
+          }
+
+          return updatedValue;
+        });
+      },
+      [boundStore, storeOnSet]
+    );
 
     return {
       value,
@@ -220,17 +227,17 @@ export const makeUseServerSideCookieState =
 
     const [value, setValue] = useState<T>(() => initializer(retrieve()));
 
-    const boundRetrieve = () => {
+    const boundRetrieve = useCallback(() => {
       const storedValue = retrieve();
       setValue(storedValue ?? initializer(storedValue));
-    };
+    }, [initializer, retrieve]);
 
     // No Op
-    const boundStore = () => undefined;
+    const boundStore = useCallback(() => undefined, []);
 
-    const boundClear = () => {
+    const boundClear = useCallback(() => {
       setValue(initializer(undefined));
-    };
+    }, [initializer]);
 
     return {
       value,

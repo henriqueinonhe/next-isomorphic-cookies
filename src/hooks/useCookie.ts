@@ -2,6 +2,7 @@ import { Logger } from "../utils/logger";
 import { useCookiesInServer } from "./useCookiesInServer";
 import { UseIsomorphicLayoutEffect } from "./useIsomorphicLayoutEffect";
 import { CookieAttributes, Cookies } from "../cookies/Cookies";
+import { useCallback, useMemo } from "react";
 
 export type UseCookie = <T>(key: string) => {
   /**
@@ -60,7 +61,7 @@ export const makeUseClientSideCookie =
       isHydratingRef.current = false;
     }, []);
 
-    const retrieve = (): T | undefined => {
+    const retrieve = useCallback((): T | undefined => {
       // Here we want to have the freshest value possible
       const needsSyncAfterHydration =
         noCookiesInServer && isHydratingRef.current;
@@ -83,15 +84,18 @@ export const makeUseClientSideCookie =
       }
 
       return JSON.parse(serializedData);
-    };
+    }, [noCookiesInServer, isHydratingRef, cookiesInServer, key]);
 
-    const store = (data: T, attributes?: CookieAttributes) => {
-      Cookies.set(key, JSON.stringify(data), attributes);
-    };
+    const store = useCallback(
+      (data: T, attributes?: CookieAttributes) => {
+        Cookies.set(key, JSON.stringify(data), attributes);
+      },
+      [key]
+    );
 
-    const clear = () => {
+    const clear = useCallback(() => {
       Cookies.remove(key);
-    };
+    }, [key]);
 
     return {
       store,
@@ -113,14 +117,16 @@ export const makeUseServerSideCookie =
     const noCookiesInServer = cookiesInServer === null;
     const needsSync = noCookiesInServer && isHydratingRef.current;
 
-    const retrieve = (): T | undefined =>
-      noCookiesInServer ? undefined : JSON.parse(cookiesInServer[key]);
+    const retrieve = useMemo(() => {
+      return (): T | undefined =>
+        noCookiesInServer ? undefined : JSON.parse(cookiesInServer[key]);
+    }, [cookiesInServer, key, noCookiesInServer]);
 
     // No Op
-    const store = (): void => undefined;
+    const store = useCallback((): void => undefined, []);
 
     // No Op
-    const clear = (): void => undefined;
+    const clear = useCallback((): void => undefined, []);
 
     return {
       store,
