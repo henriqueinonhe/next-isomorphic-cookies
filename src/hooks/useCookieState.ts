@@ -225,14 +225,12 @@ export const makeUseClientSideCookieState =
           const updatedValue = updatedValueFromUpdater(currentValue, updater);
 
           if (Boolean(storeOnSet)) {
-            const { attributes } = storeOnSet as Exclude<
+            const { attributes = {} } = storeOnSet as Exclude<
               StoreOnSetOption,
               boolean
             >;
 
-            store(updatedValue, {
-              attributes,
-            });
+            store(updatedValue, attributes);
           }
 
           return updatedValue;
