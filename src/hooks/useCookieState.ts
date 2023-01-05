@@ -1,31 +1,112 @@
 import { Dispatch, SetStateAction, useCallback, useState } from "react";
 import { CookieAttributes } from "../cookies/Cookies";
 import { identity } from "../utils/identity";
+import { IfThenElse, IsEqual } from "../utils/types";
 import { updatedValueFromUpdater, Updater } from "../utils/updater";
 import { UseCookie } from "./useCookie";
 import { UseSyncWithCookie } from "./useSyncWithCookie";
 
-export type UseCookieState<T> = (
-  /**
-   * Cookie key/name.
-   */
-  key: string,
+export type UseCookieState = {
+  <State>(
+    /**
+     * Cookie key/name.
+     */
+    key: string,
 
-  /**
-   * Function that is called to initialize
-   * the state value and, in cases where
-   * cookies are not available on the server,
-   * again after hydration.
-   */
-  initializer: (storedValue: T | undefined) => T,
+    /**
+     * Function that is called to initialize
+     * the state value and, in cases where
+     * cookies are not available on the server,
+     * again after hydration.
+     */
+    initializer: (value: State | undefined) => State,
 
-  options?: UseCookieStateOptions<T>
-) => {
+    options?: UseCookieStateOptions<State, State>
+  ): UseCookieStateReturnValue<State>;
+
+  <State, SerializedState>(
+    /**
+     * Cookie key/name.
+     */
+    key: string,
+
+    /**
+     * Function that is called to initialize
+     * the state value and, in cases where
+     * cookies are not available on the server,
+     * again after hydration.
+     */
+    initializer: (value: State | undefined) => State,
+
+    options: UseCookieStateOptions<State, SerializedState>
+  ): UseCookieStateReturnValue<State>;
+};
+
+type UseCookieStateOptions<State, SerializedState> = {
+  /**
+   * Defaults to true.
+   *
+   * Whether the value should be stored
+   * in the cookie everytime setValue
+   * is called.
+   *
+   * It is possible to pass a serializer
+   * that will transform the value
+   * before it is stored as a cookie or a
+   * deserializer that will transform the value
+   * after it is retrieved from the cookie.
+   */
+  storeOnSet?: StoreOnSetOption;
+} & IfThenElse<
+  IsEqual<State, SerializedState>,
+  {
+    /**
+     * Transforms the value before
+     * it is stored.
+     *
+     * Defaults to identity function.
+     */
+    serializer?: (value: State) => SerializedState;
+
+    /**
+     * Transforms the cookie value before
+     * setting value to it.
+     *
+     * Defaults to identity function.
+     */
+    deserializer?: (value: SerializedState) => State;
+  },
+  {
+    /**
+     * Transforms the value before
+     * it is stored.
+     */
+    serializer: (value: State) => SerializedState;
+
+    /**
+     * Transforms the cookie value before
+     * setting value to it.
+     */
+    deserializer: (value: SerializedState) => State;
+  }
+>;
+
+type StoreOnSetOption =
+  | true
+  | false
+  | {
+      /**
+       * js-cookie attributes
+       */
+      attributes?: CookieAttributes;
+    };
+
+type UseCookieStateReturnValue<State> = {
   /**
    * Pretty much like the value you'd get
    * when calling `useState`.
    */
-  value: T;
+  value: State;
 
   /**
    * Pretty much like the setter you'd get
@@ -36,85 +117,26 @@ export type UseCookieState<T> = (
    * stores the value it was called with
    * in the cookie.
    */
-  setValue: Dispatch<SetStateAction<T>>;
+  setValue: Dispatch<SetStateAction<State>>;
 
   /**
    * Reads value off cookie and calls sets
    * `value` to it.
-   *
-   * You may optionally pass a `deserializer`
-   * that transforms the cookie value before
-   * setting value to it.
    */
-  retrieve: (options?: {
-    /**
-     * Transforms the cookie value before
-     * setting value to it.
-     *
-     * Defaults to identity function.
-     */
-    deserializer?: (storedValue: T | undefined) => T;
-  }) => void;
+  retrieve: () => void;
 
   /**
    * Stores value in cookie.
    */
-  store: (
+  store: (options?: {
     /**
-     * Value to be stored.
+     * js-cookie attributes
      */
-    value: T,
-
-    options?: {
-      /**
-       * js-cookie attributes
-       */
-      attributes?: CookieAttributes;
-      /**
-       * Transforms the value before
-       * it is stored.
-       *
-       * Defaults to identity function.
-       */
-      serializer?: (storedValue: T | undefined) => T;
-    }
-  ) => void;
+    attributes?: CookieAttributes;
+  }) => void;
   clear: () => void;
   isSyncing: boolean;
 };
-
-type UseCookieStateOptions<T> = {
-  /**
-   * Defaults to true.
-   *
-   * Whether the value should be stored
-   * in the cookie everytime setValue
-   * is called.
-   *
-   * It is possible to pass a serializer
-   * that will transform the value
-   * before it is stored as a cookie.
-   */
-  storeOnSet?: StoreOnSetOption<T>;
-};
-
-type StoreOnSetOption<T> =
-  | true
-  | false
-  | {
-      /**
-       * js-cookie attributes
-       */
-      attributes?: CookieAttributes;
-
-      /**
-       * Transforms the value before
-       * it is stored.
-       *
-       * Defaults to identity function.
-       */
-      serializer?: (value: T) => T;
-    };
 
 type UseClientSideCookieStateDependencies = {
   useCookie: UseCookie;
@@ -122,61 +144,74 @@ type UseClientSideCookieStateDependencies = {
 };
 
 export const makeUseClientSideCookieState =
-  ({ useCookie, useSyncWithCookie }: UseClientSideCookieStateDependencies) =>
-  <T>(
+  ({
+    useCookie,
+    useSyncWithCookie,
+  }: UseClientSideCookieStateDependencies): UseCookieState =>
+  <State, SerializedState = State>(
     key: string,
-    initializer: (storedValue: T | undefined) => T,
-    options?: UseCookieStateOptions<T>
+    initializer: (value: State | undefined) => State,
+    options?: UseCookieStateOptions<State, SerializedState>
   ) => {
-    const { retrieve, store, clear, needsSync } = useCookie<T>(key);
+    const {
+      storeOnSet = true,
+      deserializer = identity as (x: SerializedState) => State,
+      serializer = identity as (x: State) => SerializedState,
+    } = options ?? {};
 
-    const { storeOnSet = true } = options ?? {};
+    const {
+      retrieve: retrieveSerializedValue,
+      store: storeSerializedValue,
+      clear,
+      needsSync,
+    } = useCookie<SerializedState>(key);
 
-    const [value, setValue] = useState<T>(() =>
+    const retrieve = useCallback(() => {
+      const serializedValue = retrieveSerializedValue();
+      if (serializedValue === undefined) {
+        return undefined;
+      }
+
+      return deserializer(serializedValue);
+    }, [deserializer, retrieveSerializedValue]);
+
+    const store = useCallback(
+      (value: State, attributes?: CookieAttributes) => {
+        storeSerializedValue(serializer(value), attributes);
+      },
+      [serializer, storeSerializedValue]
+    );
+
+    const [value, setValue] = useState<State>(() =>
       initializer(needsSync ? undefined : retrieve())
     );
 
-    useSyncWithCookie<T>(key, () => {
-      const storedValue = retrieve();
+    useSyncWithCookie<State>(key, () => {
+      const value = retrieve();
 
       // This is a kind of re-initialization
       // of the state, thus we call the
       // stored value with the initializer
-      setValue(initializer(storedValue));
+      setValue(initializer(value));
     });
 
-    const boundRetrieve = useCallback(
-      (options?: { deserializer?: (storedValue: T | undefined) => T }) => {
-        const { deserializer } = options ?? {};
+    const boundRetrieve = useCallback(() => {
+      const value = retrieve();
 
-        const storedValue = retrieve();
+      setValue(value ?? initializer(value));
+    }, [initializer, retrieve]);
 
-        if (deserializer === undefined) {
-          // If there is no stored value
-          // we reset the component to it's
-          // "default value" by calling
-          // the initializer with undefined
-          setValue(storedValue ?? initializer(storedValue));
-          return;
-        }
-
-        setValue(deserializer(storedValue));
-      },
-      [initializer, retrieve]
-    );
+    type BoundStoreOptions = {
+      attributes?: CookieAttributes;
+    };
 
     const boundStore = useCallback(
-      (
-        value: T,
-        options?: {
-          attributes?: CookieAttributes;
-        }
-      ) => {
+      (options?: BoundStoreOptions) => {
         const { attributes } = options ?? {};
 
         store(value, attributes);
       },
-      [store]
+      [store, value]
     );
 
     const boundClear = useCallback(() => {
@@ -185,17 +220,17 @@ export const makeUseClientSideCookieState =
     }, [clear, initializer]);
 
     const decoratedSetValue = useCallback(
-      (updater: Updater<T>) => {
+      (updater: Updater<State>) => {
         setValue((currentValue) => {
           const updatedValue = updatedValueFromUpdater(currentValue, updater);
 
           if (Boolean(storeOnSet)) {
-            const { attributes = {}, serializer = identity } =
-              storeOnSet as Exclude<StoreOnSetOption<T>, boolean>;
+            const { attributes } = storeOnSet as Exclude<
+              StoreOnSetOption,
+              boolean
+            >;
 
-            const valueToBeStored = serializer(updatedValue);
-
-            boundStore(valueToBeStored, {
+            store(updatedValue, {
               attributes,
             });
           }
@@ -203,7 +238,7 @@ export const makeUseClientSideCookieState =
           return updatedValue;
         });
       },
-      [boundStore, storeOnSet]
+      [store, storeOnSet]
     );
 
     return {
@@ -221,11 +256,28 @@ type UseServerSideCookieStateDependencies = {
 };
 
 export const makeUseServerSideCookieState =
-  ({ useCookie }: UseServerSideCookieStateDependencies) =>
-  <T>(key: string, initializer: (storedValue: T | undefined) => T) => {
-    const { retrieve, needsSync } = useCookie<T>(key);
+  ({ useCookie }: UseServerSideCookieStateDependencies): UseCookieState =>
+  <State, SerializedState = State>(
+    key: string,
+    initializer: (value: State | undefined) => State,
+    options?: UseCookieStateOptions<State, SerializedState>
+  ) => {
+    const { deserializer = identity as (x: SerializedState) => State } =
+      options ?? {};
 
-    const [value, setValue] = useState<T>(() => initializer(retrieve()));
+    const { retrieve: retrieveSerializedValue, needsSync } =
+      useCookie<SerializedState>(key);
+
+    const retrieve = useCallback(() => {
+      const serializedValue = retrieveSerializedValue();
+      if (serializedValue === undefined) {
+        return undefined;
+      }
+
+      return deserializer(serializedValue);
+    }, [deserializer, retrieveSerializedValue]);
+
+    const [value, setValue] = useState<State>(() => initializer(retrieve()));
 
     const boundRetrieve = useCallback(() => {
       const storedValue = retrieve();
