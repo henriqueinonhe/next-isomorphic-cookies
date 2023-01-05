@@ -347,7 +347,7 @@ describe("When in the client", () => {
         expect(result.current.value).toBe(initializer("Cookie Client Value"));
       });
 
-      describe("And we call retrieve without a serializer during hydration", () => {
+      describe("And we call retrieve during hydration", () => {
         const fourthSetup = () => {
           const thirdSetupReturnValue = thirdSetup();
           const { useCookieState, initializer, key } = thirdSetupReturnValue;
@@ -471,7 +471,7 @@ describe("When in the client", () => {
       expect(valueProbe[0]).toBe("COOKIE CLIENT VALUE");
     });
 
-    describe("And we call retrieve without a serializer after setting state", () => {
+    describe("And we call retrieve after setting state", () => {
       const thirdSetup = () => {
         const secondSetupReturnValue = secondSetup({
           cookiesInServer: null,
@@ -503,47 +503,6 @@ describe("When in the client", () => {
           "Cookie Client Value"
         );
       });
-    });
-  });
-
-  describe("And we call retrieve with a deserializer", () => {
-    const secondSetup = () => {
-      const isHydratingRef = {
-        current: false,
-      };
-
-      const setupReturnValue = setup({
-        cookiesInServer: {
-          SomeCookie: JSON.stringify("Some Value"),
-        },
-        isHydratingRef,
-      });
-      const { initializer, key, useCookieState } = setupReturnValue;
-
-      const deserializer = (value: string) => value.toLowerCase();
-
-      const renderHookReturnValue = renderHook(() =>
-        useCookieState(key, initializer)
-      );
-
-      act(() => {
-        renderHookReturnValue.result.current.retrieve({
-          deserializer,
-        });
-      });
-
-      return {
-        ...setupReturnValue,
-        renderHookReturnValue,
-      };
-    };
-
-    it("Sets value to the value returned by the deserializer called with cookie value", () => {
-      const { renderHookReturnValue } = secondSetup();
-
-      expect(renderHookReturnValue.result.current.value).toBe(
-        "cookie client value"
-      );
     });
   });
 
@@ -766,9 +725,8 @@ describe("When in the client", () => {
 
       const renderHookReturnValue = renderHook(() =>
         useCookieState(key, initializer, {
-          storeOnSet: {
-            serializer,
-          },
+          storeOnSet: true,
+          serializer,
         })
       );
 
