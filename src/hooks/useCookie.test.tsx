@@ -61,10 +61,9 @@ describe("Core behavior", () => {
     });
 
     describe("And there ARE cookies in server", () => {
-      const secondSetup = () => {
+      const secondSetup = (cookieValue: string | undefined) => {
         const cookiesInServer = {
-          firstCookie: JSON.stringify("firstCookie"),
-          secondCookie: JSON.stringify("secondCookie"),
+          firstCookie: cookieValue,
         };
 
         return { ...setup({ cookiesInServer }), cookiesInServer };
@@ -73,12 +72,28 @@ describe("Core behavior", () => {
       describe("And we're retrieving", () => {
         const thirdSetup = secondSetup;
 
-        it("Returns cookies in server", () => {
-          const { renderHookReturnValue, cookiesInServer } = thirdSetup();
+        describe("And cookie is defined", () => {
+          const fourthSetup = () => thirdSetup(JSON.stringify("firstCookie"));
 
-          expect(renderHookReturnValue.result.current.retrieve()).toStrictEqual(
-            JSON.parse(cookiesInServer.firstCookie)
-          );
+          it("Returns cookies in server", () => {
+            const { renderHookReturnValue, cookiesInServer } = fourthSetup();
+
+            expect(
+              renderHookReturnValue.result.current.retrieve()
+            ).toStrictEqual(JSON.parse(cookiesInServer.firstCookie as string));
+          });
+        });
+
+        describe("And cookie is undefined", () => {
+          const fourthSetup = thirdSetup(undefined);
+
+          it("Returns cookies in server", () => {
+            const { renderHookReturnValue, cookiesInServer } = fourthSetup;
+
+            expect(
+              renderHookReturnValue.result.current.retrieve()
+            ).toStrictEqual(cookiesInServer.firstCookie);
+          });
         });
       });
     });

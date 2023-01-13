@@ -1,7 +1,7 @@
 import React, { createContext, ReactNode, useMemo } from "react";
 
 type CookiesInServerContextValue = {
-  cookiesInServer: Record<string, string> | null;
+  cookiesInServer: Record<string, string | undefined> | null;
   isHydratingRef: { current: boolean };
 };
 

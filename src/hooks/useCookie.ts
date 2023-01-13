@@ -118,8 +118,18 @@ export const makeUseServerSideCookie =
     const needsSync = noCookiesInServer && isHydratingRef.current;
 
     const retrieve = useMemo(() => {
-      return (): T | undefined =>
-        noCookiesInServer ? undefined : JSON.parse(cookiesInServer[key]);
+      return (): T | undefined => {
+        if (noCookiesInServer) {
+          return undefined;
+        }
+
+        const serializedCookie = cookiesInServer[key];
+        if (serializedCookie === undefined) {
+          return undefined;
+        }
+
+        return JSON.parse(serializedCookie);
+      };
     }, [cookiesInServer, key, noCookiesInServer]);
 
     // No Op
