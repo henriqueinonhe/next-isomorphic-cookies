@@ -1,6 +1,6 @@
 {
   "name": "next-isomorphic-cookies",
-  "version": "1.0.0-alpha.7",
+  "version": "1.0.0-alpha.8",
   "description": "Using cookies in NextJS made easy! Seamless integration with SSG and SSR, while avoiding hydration mismatches.",
   "main": "dist/index.js",
   "scripts": {
