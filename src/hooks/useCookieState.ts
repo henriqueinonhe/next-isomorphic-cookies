@@ -84,10 +84,10 @@ type UseCookieStateOptions<State, SerializedState> = {
     serializer: (value: State) => SerializedState;
 
     /**
-     * Transforms the cookie value before
-     * setting value to it.
+     * Transforms the cookie value calling
+     * the setter on it.
      */
-    deserializer: (value: SerializedState) => State;
+    deserializer: (value: SerializedState) => State | undefined;
   }
 >;
 
